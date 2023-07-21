@@ -1,0 +1,143 @@
+import cv2
+import pytesseract
+import imutils
+import pyautogui
+from pynput.keyboard import Listener ,Controller , Key
+import time
+import threading
+import numpy as np
+import pygame
+import keyboard
+from pygame.locals import *
+
+
+def kiem_tra():
+    while True:
+        if end_thread2:
+            break
+        frame = pyautogui.screenshot()
+        frame = np.array(frame)
+        for i in range(527 , 551):
+            for j in range(947 , 973):
+                frame[i][j] = (0 , 0 , 0)
+
+        frame = frame[478:599 , 890:1024 , :]
+        frame = cv2.resize(frame , (700 , 700) )
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        # 19 16 251
+        # [[[ 98  4 251]]]
+        # low = np.array([56 , 83 , 135])
+        # hight = np.array([153 , 255 , 255])
+        # low = np.array([56 , 83 , 135])
+        # hight = np.array([114 , 255 , 255])
+        low = np.array([0 , 200 , 150])
+        hight = np.array([100 , 300 , 300])
+
+
+
+        khoan_trang = cv2.inRange(hsv_image , low , hight)
+
+        khoan_trang = cv2.Canny(khoan_trang , 100 , 200)
+
+        khoan_trang,_ = cv2.findContours(khoan_trang , cv2.RETR_TREE , cv2.CHAIN_APPROX_NONE)
+        player_rect1 = None
+        for i in khoan_trang:
+            if cv2.contourArea(i) <300:
+                continue
+            #cv2.deawcContours(frame , i , -1 , (0 , 255 , 0) , 3)
+            x , y , w , h =cv2.boundingRect(i)
+            player_rect1 = Rect(x, y , w , h)
+            cv2.rectangle(frame , (x , y) , (x+w , y+h) , (0 , 255 , 0) , 3)
+
+        # [[[178 252 168]]]
+        # a = np.array([150, 200, 160])
+        # b = np.array([200, 250, 210])
+        # [[[  0 254 240]]]
+        a = np.array([100, 200, 150])
+        b = np.array([200, 300, 300])
+        # a = np.array([0, 196, 193])
+        # b = np.array([0, 255, 255])
+        kim_do = cv2.inRange(hsv_image , a , b)
+
+        kim_do = cv2.Canny(kim_do , 100 , 200)
+
+        kim_do,_ =cv2.findContours(kim_do , cv2.RETR_TREE , cv2.CHAIN_APPROX_NONE)
+        player_rect2 = None
+
+
+        for i in kim_do:
+            if cv2.contourArea(i) < 300:
+                    continue
+            x , y , w , h = cv2.boundingRect(i)
+
+            player_rect2 = Rect(x, y , w ,h)
+            cv2.rectangle(frame , (x , y ) , (x+w , y+h) , (0 , 255 , 0) , 3)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        cv2.imwrite('frame.png' , frame)
+        if player_rect1 != None and player_rect2  != None:
+            collide = pygame.Rect.colliderect(player_rect1, player_rect2)
+            if collide:
+                keyboard.press_and_release('e')
+
+def press_key():
+    kb.press('e')
+    time.sleep(0.05)
+    kb.release('e')
+    time.sleep(0.1)
+
+
+def press():
+    while True:
+        if end_thread:
+            break
+
+        img = pyautogui.screenshot()
+        img = np.array(img)
+        img_crop = img[20:56 , 33:274 , :]
+        pytesseract.pytesseract.tesseract_cmd = "C:\Program Files\\Tesseract-OCR\\tesseract.exe"
+        img = cv2.cvtColor(img_crop , cv2.COLOR_BGR2RGB)
+        text = pytesseract.image_to_string(img)
+        if len(text) >= 10:
+            press_key()
+
+
+
+def end_sys(key):
+    global end_thread
+    global end_thread2
+
+
+    key = str(key)
+    #ctrl + alt + q
+    # sys Exit
+    if   key == "<81>":
+        raise SystemExit(0)
+    #ctrl + alt + s
+    # Thread Start
+    elif key == "<83>":
+        end_thread = False
+        end_thread2 = False
+        thread = threading.Thread(target= press)
+        thread.start()
+        thread2 = threading.Thread(target= kiem_tra)
+        thread2.start()
+
+    #ctrl + alt + e
+    # Thread End
+    elif key == "<69>":
+        end_thread = True
+        end_thread2 = True
+
+
+if __name__ == '__main__':
+
+
+    kb = Controller()
+    end_thread = False
+    end_thread2 = False
+
+
+
+    with Listener(on_press= end_sys) as listener2:
+        listener2.join()            
