@@ -1,0 +1,92 @@
+from PyQt5 import QtCore, QtGui, QtWidgets
+import os
+from PyQt5.QtWidgets import QMessageBox,QTableWidgetItem,QFileDialog,QMainWindow, QHeaderView, QCheckBox,QMenu
+from datetime import *
+import json
+import requests
+from time import sleep
+import sys
+import json, webbrowser
+from keyauth import api
+import sys
+import hashlib
+# from loginhandle import login_handle
+from PyQt5.QtCore import Qt
+from login import Ui_MainWindow_Login
+import configparser
+
+hanoi_tz = timezone(timedelta(hours=7))
+def getchecksum():
+    path = os.path.basename(__file__)
+    if not os.path.exists(path):
+        path = path[:-2] + "exe"
+    md5_hash = hashlib.md5()
+    a_file = open(path, "rb")
+    content = a_file.read()
+    md5_hash.update(content)
+    digest = md5_hash.hexdigest()
+    return digest
+keyauthapp = api(
+    name = "test",
+    ownerid = "pUKcPPcoND",
+    secret = "4e46a6429f11daf2972e9a4763a72e9c68d8d8ffbde9920e3dab121f339504eb",
+    version = "1.0",
+    hash_to_check = getchecksum()
+)
+
+
+FMT =  '%H_%M_%S %d_%m_%Y'
+
+def getdata(filepath):
+    file = open(filepath)
+    sN = file.read()
+    aN = sN.split('\n')
+    return aN
+
+class login_handle(Ui_MainWindow_Login):
+    def __init__(self, mainwindow):
+        self.setupUi(mainwindow)
+class UI():
+    def __init__(self):
+        self.loginUI = QMainWindow()
+        self.loginhandle = login_handle(self.loginUI)
+        self.loginUI.show()
+        self.loginhandle.pushButton.clicked.connect(self.run)
+        self.loginhandle.commandLinkButton.clicked.connect(self.handle_link) # commandLinkButton_2
+        try:
+            ls_key = config["SETTINGS"]["licensekey"]
+            self.loginhandle.lineEdit.setText(ls_key)
+        except:
+            pass
+
+    def handle_link(self):
+        webbrowser.open('https://t.me/Justice0210') 
+    def run(self):
+        self.key = self.loginhandle.lineEdit.displayText()
+        success,data = keyauthapp.license(self.key)
+        if success:
+            # Nếu đúng thì show gui chính ra
+            config["SETTINGS"]["licensekey"] = self.key
+            with open('settings.ini', 'w') as configfile:    
+                config.write(configfile)
+            print('Key đúng tự lót cái code sau vào nhé')
+
+            # ném vào đây
+
+        else:
+            # Sai thì show tiêu đề sai
+            print('key sai : ',data)
+
+
+        
+
+
+if __name__ == "__main__":
+    config = configparser.ConfigParser()
+    try: config.read('settings.ini') 
+    except: pass
+    try: config.add_section("SETTINGS")
+    except: pass
+    app = QtWidgets.QApplication(sys.argv)
+    ui = UI()
+    sys.exit(app.exec_())
